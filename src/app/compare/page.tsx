@@ -55,38 +55,60 @@ export default function ComparePage() {
             </p>
 
             <div className="person-cols">
-              {c.perPerson.map((p) => (
-                <div className="person-col" key={p.person}>
-                  <h3>
-                    {PERSON_LABEL[p.person]}{" "}
-                    {p.dealbreakers.length === 0 ? (
-                      <span className="badge clean">clean</span>
-                    ) : (
-                      <span className="badge dealbreaker">dealbreaker</span>
+              {c.perPerson.map((p) => {
+                const hasDealbreaker = p.dealbreakers.length > 0;
+                const hasCompromise = p.softResults.some((s) => s.status !== "met");
+                return (
+                  <div
+                    className={`person-col${hasDealbreaker ? " has-dealbreaker" : ""}`}
+                    key={p.person}
+                  >
+                    <h3>
+                      {PERSON_LABEL[p.person]}
+                      {hasDealbreaker ? (
+                        <span className="badge dealbreaker">✕ Dealbreaker</span>
+                      ) : hasCompromise ? (
+                        <span className="badge compromise">⚠ Compromise</span>
+                      ) : (
+                        <span className="badge clean">✓ Works</span>
+                      )}
+                    </h3>
+                    <div className="flat-meta">
+                      Her share: ₹{p.rentShare.toLocaleString("en-IN")}
+                      {p.overBudget && " (over budget)"}
+                    </div>
+                    {p.dealbreakers.length > 0 && (
+                      <ul>
+                        {p.dealbreakers.map((d) => (
+                          <li key={d.code}>
+                            <span className="symbol dealbreaker">✕</span> {d.detail}
+                          </li>
+                        ))}
+                      </ul>
                     )}
-                  </h3>
-                  <div className="flat-meta">
-                    Her share: ₹{p.rentShare.toLocaleString("en-IN")}
-                    {p.overBudget && " (over budget)"}
+                    {p.softResults.length > 0 && (
+                      <ul>
+                        {p.softResults.map((s) => (
+                          <li key={s.preference}>
+                            <span
+                              className={`symbol ${
+                                s.status === "met"
+                                  ? "works"
+                                  : s.status === "compromise"
+                                  ? "compromise"
+                                  : "compromise"
+                              }`}
+                            >
+                              {s.status === "met" ? "✓" : s.status === "compromise" ? "⚠" : "?"}
+                            </span>{" "}
+                            {s.preference}
+                          </li>
+                        ))}
+                      </ul>
+                    )}
                   </div>
-                  {p.dealbreakers.length > 0 && (
-                    <ul>
-                      {p.dealbreakers.map((d) => (
-                        <li key={d.code}>{d.detail}</li>
-                      ))}
-                    </ul>
-                  )}
-                  {p.softResults.length > 0 && (
-                    <ul>
-                      {p.softResults.map((s) => (
-                        <li key={s.preference}>
-                          {s.preference} — <span className={`badge ${s.status}`}>{s.status}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         ))
