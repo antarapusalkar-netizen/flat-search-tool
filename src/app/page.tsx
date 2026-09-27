@@ -39,8 +39,8 @@ export default async function Home() {
       <div className="card">
         <h2>2. Add candidate flats</h2>
         <p className="hint" style={{ marginBottom: 14 }}>
-          Paste in details of a flat you found. This tool doesn&apos;t search
-          listings for you — you find them, it checks them.
+          Search NoBroker for listings, or paste in details of a flat you found
+          by hand. Either way, you confirm every field before it&apos;s added.
         </p>
         <Link href="/flats" className="nav">
           <span className="nav">
