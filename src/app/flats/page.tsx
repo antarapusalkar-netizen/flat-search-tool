@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Flat } from "@/lib/types";
+import { PropertyListingCandidate } from "@/lib/properties/types";
 
 export default function FlatsPage() {
   const [flats, setFlats] = useState<Flat[]>([]);
@@ -18,6 +19,15 @@ export default function FlatsPage() {
   const [bathrooms, setBathrooms] = useState("1");
   const [petFriendly, setPetFriendly] = useState(false);
   const [notes, setNotes] = useState("");
+
+  const [searchCity, setSearchCity] = useState("Pune");
+  const [searchLocality, setSearchLocality] = useState("");
+  const [searchBhk, setSearchBhk] = useState("");
+  const [searching, setSearching] = useState(false);
+  const [searchLive, setSearchLive] = useState<boolean | null>(null);
+  const [searchError, setSearchError] = useState("");
+  const [hasSearched, setHasSearched] = useState(false);
+  const [candidates, setCandidates] = useState<PropertyListingCandidate[]>([]);
 
   const load = () =>
     fetch("/api/flats")
@@ -70,15 +80,123 @@ export default function FlatsPage() {
     load();
   };
 
+  const search = async () => {
+    setSearching(true);
+    setSearchError("");
+    setHasSearched(false);
+    setCandidates([]);
+    try {
+      const res = await fetch("/api/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          city: searchCity,
+          locality: searchLocality,
+          bhk: searchBhk ? Number(searchBhk) : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setSearchError(data.error ?? "Search failed");
+        return;
+      }
+      setSearchLive(Boolean(data.live));
+      setCandidates(data.candidates ?? []);
+      setHasSearched(true);
+    } catch {
+      setSearchError("Search failed — check your connection and try again.");
+    } finally {
+      setSearching(false);
+    }
+  };
+
+  const useCandidate = (c: PropertyListingCandidate) => {
+    setName(c.title);
+    setAddress(c.address);
+    setArea(c.area);
+    if (c.rent !== null) setRent(String(c.rent));
+    if (c.floor !== null) setFloor(String(c.floor));
+    if (c.hasLift !== null) setHasLift(c.hasLift);
+    if (c.hasParking !== null) setHasParking(c.hasParking);
+    if (c.bathrooms !== null) setBathrooms(String(c.bathrooms));
+    setPetFriendly(false);
+    setNotes(c.notes);
+    document.getElementById("add-flat-form")?.scrollIntoView({ behavior: "smooth" });
+  };
+
   return (
     <main>
       <h1>Candidate flats</h1>
       <p className="lede">
-        Paste in details of a flat one of you found. Nothing here is looked up
-        automatically — you find the listing, this checks it.
+        Search NoBroker for listings, or paste in details of a flat one of you found by
+        hand. Either way, you confirm every field before it's added — nothing gets checked
+        against anyone's constraints until you do.
       </p>
 
       <div className="card">
+        <h2>Search NoBroker</h2>
+        {searchLive === false && (
+          <p className="hint">
+            No RAPIDAPI_KEY configured — showing a few sample Pune listings so the flow
+            still works in dev.
+          </p>
+        )}
+        <label>City</label>
+        <input value={searchCity} onChange={(e) => setSearchCity(e.target.value)} />
+        <label>Locality (optional)</label>
+        <input
+          value={searchLocality}
+          onChange={(e) => setSearchLocality(e.target.value)}
+          placeholder="e.g. Baner"
+        />
+        <label>Bedrooms / BHK (optional)</label>
+        <input
+          type="number"
+          min={1}
+          value={searchBhk}
+          onChange={(e) => setSearchBhk(e.target.value)}
+        />
+        <button className="primary" disabled={searching || !searchCity} onClick={search}>
+          {searching ? "Searching…" : "Search"}
+        </button>
+        {searchError && <p className="hint">{searchError}</p>}
+        {hasSearched && !searchError && candidates.length === 0 && (
+          <p className="hint">
+            No listings came back for that search
+            {searchLive ? " — NoBroker's scraper is a bit unreliable, worth trying again" : ""}.
+            You can always add a flat by hand below.
+          </p>
+        )}
+
+        {candidates.length > 0 && (
+          <div className="flat-list">
+            {candidates.map((c) => (
+              <div className="flat-row" key={c.sourceId}>
+                <div>
+                  <strong>{c.title}</strong>
+                  <div className="flat-meta">
+                    {c.area || "area unknown"} ·{" "}
+                    {c.rent !== null
+                      ? `₹${c.rent.toLocaleString("en-IN")}/mo${c.rentIsEstimate ? " (estimate)" : ""}`
+                      : "rent unknown"}{" "}
+                    · {c.bathrooms ?? "?"} bath
+                  </div>
+                  {c.sourceUrl && (
+                    <a href={c.sourceUrl} target="_blank" rel="noreferrer">
+                      view source listing
+                    </a>
+                  )}
+                </div>
+                <button className="secondary" onClick={() => useCandidate(c)}>
+                  Use this
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="card" id="add-flat-form">
         <h2>Add a flat</h2>
         <label>Name / listing title</label>
         <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. 3BHK Baner" />

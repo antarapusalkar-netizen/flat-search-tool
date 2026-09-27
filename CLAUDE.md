@@ -12,9 +12,9 @@ The actual problem isn't finding listings — there are plenty. The problem is t
 
 ## What this tool does NOT do
 
-It does **not** search for or discover flat listings. There is no listings data source (no portal, API, or feed) available — this was deliberately cut from scope. Flats are entered manually by the users.
-
 It does **not** pick a flat for the group. The three friends make the final decision together.
+
+It does **not** trust a listings source blindly. NoBroker's scraped data never reports pet policy, and rent/bathrooms/lift can be missing or unreliable — every searched listing lands as a draft that a person must review and confirm before it becomes a real candidate flat that dealbreaker checks run against. Manual paste-in entry stays fully supported alongside search.
 
 ## What this tool DOES do
 
@@ -24,7 +24,7 @@ It does **not** pick a flat for the group. The three friends make the final deci
    - Hard requirements (lift, parking, number of bathrooms, pet-friendly, etc.)
    - Soft preferences (nice-to-haves, not dealbreakers)
 
-2. **Manual flat entry** — users paste in details of a candidate flat (address, rent, floor/lift, bathrooms, pet policy, etc.) they found themselves.
+2. **Flat entry** — via NoBroker listings search (`src/lib/properties/`, city/locality/BHK in, a reviewable draft out) or by pasting in details of a flat found by hand. Either path ends the same way: a person confirms the fields before it's added.
 
 3. **Comparison engine** — for each flat entered, checks it against all three people's stored constraints and produces a clear breakdown:
    - Who gets everything they wanted
@@ -44,5 +44,6 @@ It does **not** pick a flat for the group. The three friends make the final deci
 
 - Next.js 15 (App Router, TypeScript), deployed to Vercel.
 - Database: Supabase (Postgres) — `constraints` + `flats` tables, see `supabase/schema.sql`. Falls back to an in-memory mock when `SUPABASE_URL` / `SUPABASE_SERVICE_ROLE_KEY` aren't set (dev-only; does not persist across serverless invocations).
+- Listings search: NoBroker, via the RapidAPI wrapper at `nobroker-api.p.rapidapi.com` (`src/lib/properties/nobroker.ts`), gated behind `RAPIDAPI_KEY`. Falls back to a handful of sample Pune listings (`src/lib/properties/mock.ts`) when unset. Searched listings are drafts only — never written to `flats` until a person confirms them via the "Add a flat" form.
 - LLM: OpenAI (`gpt-4o-mini`), used **only** for the fuzzy part — judging whether a flat's free-text notes satisfy each person's soft preferences, and writing one neutral tradeoff paragraph. Hard dealbreakers (budget, lift, area, bathrooms, pet policy) are checked with plain deterministic code in `src/lib/compare.ts`, never left to the model. Falls back to a heuristic (non-LLM) mode when `OPENAI_API_KEY` isn't set.
 - No login: each person's intake lives at `/intake/riya`, `/intake/meera`, `/intake/kavita`. Trust-based, matching this course's other mini-projects — not a real auth boundary.

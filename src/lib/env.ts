@@ -3,3 +3,5 @@ export const hasSupabase = Boolean(
 );
 
 export const hasOpenAI = Boolean(process.env.OPENAI_API_KEY);
+
+export const hasRapidApi = Boolean(process.env.RAPIDAPI_KEY);
